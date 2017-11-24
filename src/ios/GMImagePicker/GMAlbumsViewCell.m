@@ -16,8 +16,6 @@
 - (void)awakeFromNib
 {
     [super awakeFromNib];
-    self.contentView.autoresizingMask = UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth;
-    self.contentView.translatesAutoresizingMaskIntoConstraints = YES;
 }
 
 - (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier
@@ -99,42 +97,10 @@
         //TextLabel
         self.textLabel.font = [UIFont fontWithName:@"Helvetica" size:17.0];
         self.textLabel.numberOfLines = 1;
-        self.textLabel.translatesAutoresizingMaskIntoConstraints = NO;
         
         self.detailTextLabel.font = [UIFont fontWithName:@"Helvetica" size:14.0];
         self.detailTextLabel.numberOfLines = 1;
-        self.detailTextLabel.translatesAutoresizingMaskIntoConstraints = NO;
-        
-        //Set next text labels contraints :
-        [self.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:[imageView1]-(offset)-[textLabel]-|"
-                                                                                 options:0
-                                                                                 metrics:@{@"offset": @(kAlbumImageToTextSpace)}
-                                                                                   views:@{@"textLabel": self.textLabel,
-                                                                                           @"imageView1": self.imageView1}]];
-        
-        [self.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:[imageView1]-(offset)-[detailTextLabel]-|"
-                                                                                 options:0
-                                                                                 metrics:@{@"offset": @(kAlbumImageToTextSpace)}
-                                                                                   views:@{@"detailTextLabel": self.detailTextLabel,
-                                                                                           @"imageView1": self.imageView1}]];
-        
-        
-        [self.contentView addConstraints:@[[NSLayoutConstraint constraintWithItem:self.textLabel
-                                                                        attribute:NSLayoutAttributeBottom
-                                                                        relatedBy:NSLayoutRelationEqual
-                                                                           toItem:self.textLabel.superview
-                                                                        attribute:NSLayoutAttributeCenterY
-                                                                       multiplier:1.f constant:0.f]]];
-        
-        [self.contentView addConstraints:@[[NSLayoutConstraint constraintWithItem:self.detailTextLabel
-                                                                        attribute:NSLayoutAttributeTop
-                                                                        relatedBy:NSLayoutRelationEqual
-                                                                           toItem:self.textLabel.superview
-                                                                        attribute:NSLayoutAttributeCenterY
-                                                                       multiplier:1.f constant:+4.f]]];
     }
-    
-    
     
     return self;
 }
@@ -142,9 +108,8 @@
 - (void)layoutSubviews
 {
     [super layoutSubviews];
-    
-    //TODO Reduce text font size if the name label does not fit screen.
-
+    self.textLabel.frame = CGRectMake(kAlbumLeftToImageSpace + kAlbumThumbnailSize1.width + kAlbumImageToTextSpace,self.textLabel.frame.origin.y,self.contentView.frame.size.width - kAlbumLeftToImageSpace - kAlbumThumbnailSize1.width - 8, self.textLabel.frame.size.height);
+    self.detailTextLabel.frame = CGRectMake(kAlbumLeftToImageSpace + kAlbumThumbnailSize1.width + kAlbumImageToTextSpace,self.detailTextLabel.frame.origin.y,self.contentView.frame.size.width - kAlbumLeftToImageSpace - kAlbumThumbnailSize1.width - 8 - kAlbumImageToTextSpace, self.detailTextLabel.frame.size.height);
 }
 
 - (void)setVideoLayout:(BOOL)isVideo
