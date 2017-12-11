@@ -37,19 +37,37 @@ typedef enum : NSUInteger {
     // https://developer.apple.com/library/ios/documentation/Photos/Reference/PHPhotoLibrary_Class/
 
     PHAuthorizationStatus status = [PHPhotoLibrary authorizationStatus];
-    if (status == PHAuthorizationStatusAuthorized) {
+    CDVPluginResult* pluginResult = nil;
+
+    if (status == PHAuthorizationStatusNotDetermined) {
+        // Access has not been determined. requestAuthorization: is available
+        [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
+            CDVPluginResult* pluginResult = nil;
+            if (status == PHAuthorizationStatusAuthorized) {
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            } else {
+                [self showProhibitedMessage];
+                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
+                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+            }
+        }];
+    } else if (status == PHAuthorizationStatusAuthorized) {
         NSLog(@"Access has been granted.");
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
     } else if (status == PHAuthorizationStatusDenied) {
         NSLog(@"Access has been denied. Change your setting > this app > Photo enable");
-    } else if (status == PHAuthorizationStatusNotDetermined) {
-        // Access has not been determined. requestAuthorization: is available
-        [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {}];
+        [self showProhibitedMessage];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
     } else if (status == PHAuthorizationStatusRestricted) {
         NSLog(@"Access has been restricted. Change your setting > Privacy > Photo enable");
+        [self showProhibitedMessage];
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR];
     }
 
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    if (pluginResult != nil) {
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }
 }
 
 - (void) getPictures:(CDVInvokedUrlCommand *)command {
@@ -71,6 +89,41 @@ typedef enum : NSUInteger {
 
     self.callbackId = command.callbackId;
     [self launchGMImagePicker:allow_video title:title message:message disable_popover:disable_popover maximumImagesCount:maximumImagesCount];
+}
+
+- (void)showProhibitedMessage {
+    __weak SOSPicker* weakSelf = self;
+
+    // If iOS 8+, offer a link to the Settings app
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wtautological-pointer-compare"
+    NSString* settingsButton = (&UIApplicationOpenSettingsURLString != NULL)
+    ? NSLocalizedString(@"Settings", nil)
+    : nil;
+#pragma clang diagnostic pop
+
+    // Denied; show an alert
+    dispatch_async(dispatch_get_main_queue(), ^{
+
+        UIAlertController* alert = [UIAlertController
+                                    alertControllerWithTitle:[[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleDisplayName"]
+                                    message:NSLocalizedString(@"Access to the photo album has been prohibited; please enable it in the Settings app to continue.", nil)
+                                    preferredStyle:UIAlertControllerStyleAlert];
+        [alert addAction:[UIAlertAction
+                          actionWithTitle:NSLocalizedString(@"OK", nil)
+                          style:UIAlertActionStyleDefault handler:^(UIAlertAction * action) {}]];
+
+        if (settingsButton != nil) {
+            [alert addAction:[UIAlertAction
+                              actionWithTitle:settingsButton
+                              style:UIAlertActionStyleDefault
+                              handler:^(UIAlertAction * action) {
+                                  [[UIApplication sharedApplication] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
+                              }]];
+        }
+
+        [self.viewController presentViewController:alert animated:YES completion:nil];
+    });
 }
 
 - (void)launchGMImagePicker:(bool)allow_video title:(NSString *)title message:(NSString *)message disable_popover:(BOOL)disable_popover maximumImagesCount:(NSInteger)maximumImagesCount
